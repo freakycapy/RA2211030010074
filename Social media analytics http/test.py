@@ -3,12 +3,10 @@ import requests
 
 app = Flask(__name__)
 
-# Test server endpoints
 USERS_API = "http://20.244.56.144/test/users"
 USER_POSTS_API = "http://20.244.56.144/test/users/{userid}/posts"
 POST_COMMENTS_API = "http://20.244.56.144/test/posts/{postid}/comments"
 
-# Timeout in seconds for API calls
 API_TIMEOUT = 0.5
 
 def get_users():
@@ -16,7 +14,6 @@ def get_users():
     try:
         response = requests.get(USERS_API, timeout=API_TIMEOUT)
         response.raise_for_status()
-        # The users API returns a dictionary under "users"
         return response.json().get("users", {})
     except (requests.RequestException, ValueError):
         return {}
@@ -48,10 +45,9 @@ def top_users():
     Returns the top five users with the highest number of posts.
     Aggregates posts for every user then sorts by count descending.
     """
-    users = get_users()  # dictionary mapping userid to name
+    users = get_users() 
     user_post_counts = []
 
-    # Iterate over users and count posts for each user
     for userid, username in users.items():
         posts = get_posts_for_user(userid)
         count = len(posts)
@@ -61,7 +57,6 @@ def top_users():
             "post_count": count
         })
 
-    # Sort users by number of posts in descending order
     top_five = sorted(user_post_counts, key=lambda u: u["post_count"], reverse=True)[:5]
 
     return jsonify(top_five)
@@ -80,23 +75,19 @@ def posts_insights():
     users = get_users()
     all_posts = []
 
-    # Get posts from all users
     for userid in users.keys():
         posts = get_posts_for_user(userid)
-        # Optionally, you could add a timestamp if provided by the API; here we assume higher id = newer
         all_posts.extend(posts)
 
     if not all_posts:
         return jsonify({"message": "No posts available"}), 200
 
     if post_type == "latest":
-        # Sort posts by id in descending order assuming higher id is more recent
         sorted_posts = sorted(all_posts, key=lambda post: post.get("id", 0), reverse=True)
         latest_posts = sorted_posts[:5]
         return jsonify({"latest_posts": latest_posts})
 
     elif post_type == "popular":
-        # For popular posts, count comments per post
         posts_with_comment_count = []
         for post in all_posts:
             postid = post.get("id")
@@ -110,12 +101,10 @@ def posts_insights():
         if not posts_with_comment_count:
             return jsonify({"message": "No posts available"}), 200
 
-        # Identify maximum comment count
         max_count = max(p["comment_count"] for p in posts_with_comment_count)
         popular_posts = [p for p in posts_with_comment_count if p["comment_count"] == max_count]
 
         return jsonify({"popular_posts": popular_posts})
 
 if __name__ == '__main__':
-    # Run the microservice on the desired port
     app.run(port=9876)
